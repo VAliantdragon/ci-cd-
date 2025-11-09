@@ -11,7 +11,7 @@ env:
   DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKER_IMAGE_NAME: springboot-docker-cicd # Name of the Docker image
   # Your public Docker Hub username has been inserted here:
-  DOCKER_REPO_PATH: ozthegreat174/${{ env.DOCKER_IMAGE_NAME }}
+  DOCKER_REPO_PATH: ozthegreat174/${{springboot-docker-cicd}}
   JAVA_VERSION: '21' # Set to Java 21
   MAVEN_OPTS: -Dhttp.proxyHost= -Dhttp.proxyPort= -Dhttps.proxyHost= -Dhttps.proxyPort= -Dmaven.wagon.http.ssl.insecure=true
 
