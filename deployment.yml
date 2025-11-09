@@ -1,1 +1,72 @@
-DOCKER_REPO_PATH: ozthegreat174/${{ env.DOCKER_IMAGE_NAME }}
+# This workflow defines the CI/CD pipeline for the Spring Boot application.
+name: Java CI/CD to Docker Hub
+
+# 1. Trigger the workflow on every push to the 'main' branch
+on:
+  push:
+    branches: [ "main" ]
+
+# Define environment variables used throughout the workflow
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKER_IMAGE_NAME: springboot-docker-cicd # Name of the Docker image
+  # IMPORTANT: Replace 'YOUR_PUBLIC_DOCKERHUB_USERNAME' with your actual username below
+  DOCKER_REPO_PATH: ozthegreat174/${{ env.DOCKER_IMAGE_NAME }}
+  JAVA_VERSION: '21' # Set to Java 21
+  MAVEN_OPTS: -Dhttp.proxyHost= -Dhttp.proxyPort= -Dhttps.proxyHost= -Dhttps.proxyPort= -Dmaven.wagon.http.ssl.insecure=true
+
+jobs:
+  build-and-deploy:
+    # Use Ubuntu as the runner environment
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------------------------------
+      # CI STAGE: Build and Test
+      # ----------------------------------------------------
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }} # Will provision JDK 21
+          distribution: 'temurin'
+          cache: 'maven' # Enable caching for Maven dependencies
+
+      - name: Build with Maven (Compile and Package JAR)
+        run: mvn -B package --file pom.xml
+
+      - name: Run Unit Tests (REQUIRED Test Step)
+        # This step explicitly runs the tests.
+        run: mvn test
+
+        # ----------------------------------------------------
+        # CD STAGE: Dockerize and Push
+        # ----------------------------------------------------
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          # These reference the SECRET values you must set on GitHub
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Pushes two tags: 'latest' and the specific commit hash (for rollback)
+          tags: |
+            ${{ env.DOCKER_REPO_PATH }}:latest
+            ${{ env.DOCKER_REPO_PATH }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Image Push
+        run: echo "Successfully pushed image ${{ env.DOCKER_REPO_PATH }}:latest and ${{ env.DOCKER_REPO_PATH }}:${{ github.sha }}"
